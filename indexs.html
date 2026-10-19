@@ -1,0 +1,1194 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <title>SphygmoTest | Kalibrasi Tensimeter</title>
+
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111c2e;
+      --panel2: #17243a;
+      --border: #293a52;
+      --text: #e8eef8;
+      --muted: #91a1b8;
+      --blue: #4389f5;
+      --cyan: #42c6d9;
+      --green: #37c98b;
+      --red: #f06b76;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 50;
+      width: 250px;
+      padding: 25px 15px;
+      background: #0e1829;
+      border-right: 1px solid var(--border);
+      transform: translateX(-100%);
+      transition: transform .25s;
+      overflow-y: auto;
+    }
+
+    .sidebar.open { transform: translateX(0); }
+
+    .brand {
+      padding: 8px 10px 25px;
+      font-size: 21px;
+      font-weight: bold;
+    }
+
+    .brand span { color: var(--cyan); }
+
+    .sidebar-label {
+      margin: 15px 10px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+    }
+
+    .nav-link {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 13px;
+      color: #cbd5e1;
+      text-align: left;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: white;
+      background: #172b47;
+      border-color: #294c76;
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: #0009;
+    }
+
+    .overlay.show { display: block; }
+
+    .main { min-height: 100vh; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 24px;
+      background: #0b1220ee;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hamburger {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 42px;
+      height: 42px;
+      padding: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+
+    .hamburger span {
+      height: 2px;
+      width: 20px;
+      background: var(--cyan);
+    }
+
+    .topbar h1 { margin: 0 0 5px; font-size: 20px; }
+    .topbar p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .connection {
+      margin-left: auto;
+      padding: 7px 10px;
+      color: #f0bd4f;
+      background: #2c2619;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .connection.connected {
+      color: var(--green);
+      background: #123426;
+    }
+
+    .content {
+      max-width: 1450px;
+      margin: auto;
+      padding: 25px;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .intro { margin-bottom: 22px; }
+    .intro h2 { margin: 0 0 9px; font-size: 25px; }
+    .intro p { color: var(--muted); line-height: 1.6; }
+
+    .panel, .stat-card, .measurement-card {
+      min-width: 0;
+      padding: 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+    }
+
+    .panel { margin-bottom: 18px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card p { color: var(--muted); }
+    .stat-value { font-size: 28px; font-weight: bold; }
+
+    .muted { color: var(--muted); line-height: 1.6; }
+
+    .measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  align-items: stretch;
+}
+
+    .measurement-card h3 {
+      margin: 0 0 17px;
+      font-size: 14px;
+    }
+
+    .measurement-value {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 15px 0;
+      font-size: clamp(23px, 2.5vw, 31px);
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .measurement-value small {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: normal;
+    }
+
+    .measurement-card p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .gauge-wrap { width: 100%; max-width: 330px; margin: 0 auto; text-align: center; }
+    .pressure-gauge { display: block; width: 100%; max-height: 175px; overflow: visible; }
+    .gauge-value { justify-content: center; margin: -2px 0 12px; font-size: clamp(25px, 3vw, 34px); }
+        .chart-container { width: 100%; overflow: hidden; }
+    .chart-container svg { width: 100%; height: auto; display: block; }
+
+    .action-card {grid-column: span 1;}
+
+    .btn {
+      padding: 11px 15px;
+      color: white;
+      background: var(--blue);
+      border: 0;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .btn:hover { filter: brightness(1.1); }
+
+    .btn-secondary {
+      background: #26364b;
+      border: 1px solid #40536c;
+    }
+
+    .btn-danger {
+      background: #3b202b;
+      border: 1px solid #65303d;
+    }
+
+    .action-card .btn { width: 100%; margin-top: 8px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 17px;
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: #cbd6e6;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      min-width: 0;
+      padding: 13px;
+      color: var(--text);
+      background: #0b1525;
+      border: 1px solid #30415a;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: var(--blue); }
+
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .result {
+      margin-top: 15px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 13px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    th { color: var(--muted); }
+
+    .empty {
+      padding: 22px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    footer {
+      padding: 22px 0 5px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @media (min-width: 1100px) {
+      .sidebar { transform: translateX(0); }
+      .main { margin-left: 250px; }
+      .hamburger { display: none; }
+    }
+
+    @media (max-width: 1000px) {
+      .measurement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 560px) {
+      .content { padding: 15px 12px; }
+      .topbar { padding: 12px; gap: 10px; }
+      .topbar h1 { font-size: 16px; }
+      .measurement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .stats-grid, .form-grid { grid-template-columns: 1fr; }
+      .measurement-value { font-size: 22px; }
+      .action-card { grid-column: span 1; }
+      .panel, .measurement-card { padding: 15px; }
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Sphygmo<span>Test</span></div>
+    <div class="sidebar-label">MENU UTAMA</div>
+
+    <button class="nav-link active" data-page="dashboard">Dashboard</button>
+    <button class="nav-link" data-page="tekanan">Pengujian Tekanan</button>
+    <button class="nav-link" data-page="kebocoran">Uji Kebocoran</button>
+    <button class="nav-link" data-page="lajubuang">Laju Buang</button>
+    <button class="nav-link" data-page="riwayat">Riwayat Pengujian</button>
+    <button class="nav-link" data-page="pengaturan">Pengaturan</button>
+  </aside>
+
+  <div class="overlay" id="overlay"></div>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="hamburger" id="menuToggle"
+              aria-label="Buka menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <p>Sistem pengujian sphygmomanometer</p>
+      </div>
+      <span class="connection" id="connectionBadge">SIMULASI</span>
+    </header>
+
+    <div class="content">
+      <!-- DASHBOARD -->
+      <section class="page active" id="dashboard">
+        <div class="intro">
+          <h2>Dashboard SphygmoTest</h2>
+          <p>Pemantauan dan pencatatan pengujian tensimeter.</p>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card">
+            <p>Total pengujian</p>
+            <div class="stat-value" id="totalTests">0</div>
+          </article>
+          <article class="stat-card">
+            <p>Tekanan terakhir</p>
+            <div class="stat-value"><span id="dashboardPressure">—</span> <small>mmHg</small></div>
+          </article>
+          <article class="stat-card">
+            <p>Status perangkat</p>
+            <div class="stat-value" id="deviceStatus">Simulasi</div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <h3>Selamat datang</h3>
+          <p class="muted">
+            Pilih Pengujian Tekanan untuk melihat pembacaan sensor,
+            tegangan MPX5050GP, grafik, dan menyimpan data pengukuran.
+          </p>
+          <button class="btn" data-go="tekanan">Buka Pengujian Tekanan</button>
+        </article>
+
+        <article class="panel">
+          <h3>Pengujian terbaru</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Waktu</th><th>Jenis</th><th>Hasil</th></tr></thead>
+              <tbody id="recentTable">
+                <tr><td colspan="3" class="empty">Belum ada data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <!-- PENGUJIAN TEKANAN -->
+      <section class="page" id="tekanan">
+        <div class="intro">
+          <h2>Pengujian Tekanan</h2>
+          <p>Pemantauan tekanan dan tegangan sensor secara langsung.</p>
+        </div>
+
+        <div class="measurement-grid">
+          <article class="measurement-card">
+            <h3>Tekanan Terukur</h3>
+            <div class="gauge-wrap">
+              <svg class="pressure-gauge" viewBox="0 0 240 150" role="img" aria-label="Gauge tekanan terukur 0 sampai 400 mmHg">
+                <path d="M 30 120 A 90 90 0 0 1 210 120" fill="none" stroke="#293a52" stroke-width="18" stroke-linecap="round"/>
+                <path id="gaugeArc" d="M 30 120 A 90 90 0 0 1 210 120" fill="none" stroke="#4389f5" stroke-width="18" stroke-linecap="round" stroke-dasharray="0 283"/>
+                <line id="gaugeNeedle" x1="120" y1="120" x2="120" y2="42" stroke="#e8eef8" stroke-width="3" stroke-linecap="round" transform="rotate(-90 120 120)"/>
+                <circle cx="120" cy="120" r="7" fill="#42c6d9"/>
+                <text x="25" y="143" fill="currentColor" font-size="10">0</text>
+                <text x="202" y="143" fill="currentColor" font-size="10">400</text>
+              </svg>
+              <div class="measurement-value gauge-value">
+                <span id="measuredPressure">0.0</span><small>mmHg</small>
+              </div>
+            </div>
+            <p>Hasil konversi pembacaan sensor.</p>
+          </article>
+
+          <article class="measurement-card">
+            <h3>Tegangan MPX5050GP</h3>
+            <div class="measurement-value">
+              <span id="sensorVoltage">0.000</span><small>V</small>
+            </div>
+            <p>Tegangan keluaran sensor.</p>
+          </article>
+
+          <article class="measurement-card">
+            <h3>Selisih Error</h3>
+            <div class="measurement-value">
+              <span id="pressureError">—</span><small>mmHg</small>
+            </div>
+            <p id="errorStatus">Belum ada nilai pembanding.</p>
+          </article>
+
+          <article class="measurement-card">
+            <h3>Grafik Tekanan</h3>
+            <div class="chart-container">
+              <svg viewBox="0 0 320 180" role="img"
+                   aria-label="Grafik tekanan dalam mmHg">
+                <line x1="35" y1="15" x2="35" y2="145"
+                      stroke="currentColor" opacity=".5"/>
+                <line x1="35" y1="145" x2="305" y2="145"
+                      stroke="currentColor" opacity=".5"/>
+                <line x1="35" y1="48" x2="305" y2="48"
+                      stroke="currentColor" opacity=".12"/>
+                <line x1="35" y1="80" x2="305" y2="80"
+                      stroke="currentColor" opacity=".12"/>
+                <line x1="35" y1="112" x2="305" y2="112"
+                      stroke="currentColor" opacity=".12"/>
+                <text x="3" y="19" fill="currentColor" font-size="10">400</text>
+                <text x="3" y="51" fill="currentColor" font-size="10">300</text>
+                <text x="3" y="83" fill="currentColor" font-size="10">200</text>
+                <text x="3" y="115" fill="currentColor" font-size="10">100</text>
+                <polyline id="pressureLine" points=""
+                  fill="none" stroke="#4389f5" stroke-width="2.5"
+                  stroke-linejoin="round" stroke-linecap="round"/>
+                <text id="chartEmpty" x="170" y="85"
+                  fill="currentColor" opacity=".6" text-anchor="middle"
+                  font-size="11">Menunggu data sensor</text>
+              </svg>
+            </div>
+            <p>Grafik diperbarui saat data tekanan diterima.</p>
+          </article>
+
+          <article class="measurement-card action-card">
+            <h3>Simpan Pengukuran</h3>
+            <p>Simpan tekanan dan tegangan terakhir ke riwayat pengujian.</p>
+            <button class="btn" id="savePressure">Simpan Data</button>
+            <div id="savePressureMessage" aria-live="polite"></div>
+          </article>
+
+          <article class="measurement-card action-card">
+            <h3>Export Excel</h3>
+            <p>Ekspor data pengukuran menjadi file CSV yang bisa dibuka di Excel.</p>
+            <button class="btn btn-secondary" id="exportPressure">Export Data</button>
+          </article>
+        </div>
+
+        <article class="panel" style="margin-top:18px">
+          <h3>Catatan</h3>
+          <p class="muted">
+            Error memerlukan nilai pembanding dari alat standar. Karena form
+            tekanan standar dihilangkan, error ditampilkan sebagai tanda strip
+            sampai nilai pembanding ditambahkan melalui konfigurasi atau kode.
+            Pastikan konversi tekanan dan tegangan sudah dikalibrasi sebelum
+            menggunakan hasil sebagai data pengujian.
+          </p>
+        </article>
+      </section>
+
+      <!-- UJI KEBOCORAN -->
+      <section class="page" id="kebocoran">
+        <div class="intro">
+          <h2>Uji Kebocoran</h2>
+          <p>Pantau penurunan tekanan dari pembacaan sensor secara langsung.</p>
+        </div>
+
+        <div class="measurement-grid">
+          <article class="measurement-card">
+            <h3>Tekanan Awal</h3>
+            <div class="measurement-value">
+              <span id="leakStartDisplay">—</span><small>mmHg</small>
+            </div>
+            <p>Tekanan yang diambil saat pengujian dimulai.</p>
+            <button class="btn btn-secondary" id="captureLeakStart" type="button">Ambil Tekanan Awal</button>
+          </article>
+
+          <article class="measurement-card">
+            <h3>Tekanan Akhir</h3>
+            <div class="measurement-value">
+              <span id="leakEndDisplay">—</span><small>mmHg</small>
+            </div>
+            <p>Tekanan yang diambil saat pengujian berakhir.</p>
+            <button class="btn btn-secondary" id="captureLeakEnd" type="button">Ambil Tekanan Akhir</button>
+          </article>
+
+          <article class="measurement-card">
+            <h3>Penurunan Tekanan</h3>
+            <div class="measurement-value">
+              <span id="leakDropDisplay">—</span><small>mmHg</small>
+            </div>
+            <p>Selisih antara tekanan awal dan tekanan akhir.</p>
+          </article>
+
+          <article class="measurement-card">
+            <h3>Laju Kebocoran</h3>
+            <div class="measurement-value">
+              <span id="leakRateDisplay">—</span><small>mmHg/menit</small>
+            </div>
+            <p id="leakDurationDisplay">Durasi: —</p>
+          </article>
+
+          <article class="measurement-card action-card">
+            <h3>Simpan Pengukuran</h3>
+            <p>Simpan hasil uji kebocoran ke Riwayat Pengujian.</p>
+            <button class="btn" id="saveLeak" type="button">Simpan Data</button>
+            <div id="saveLeakMessage" aria-live="polite"></div>
+          </article>
+
+          <article class="measurement-card action-card">
+            <h3>Export Excel</h3>
+            <p>Ekspor data uji kebocoran ke file CSV yang dapat dibuka di Excel.</p>
+            <button class="btn btn-secondary" id="exportLeak" type="button">Export Data</button>
+          </article>
+        </div>
+      </section>
+
+      <!-- LAJU BUANG -->
+      <section class="page" id="lajubuang">
+        <div class="intro">
+          <h2>Pengujian Laju Buang</h2>
+          <p>Hitung laju penurunan tekanan per menit.</p>
+        </div>
+        <article class="panel">
+          <form id="deflationForm">
+            <div class="form-grid">
+              <label>Tekanan awal (mmHg)
+                <input id="deflationStart" type="number" min="0" max="400" step="any" required>
+              </label>
+              <label>Tekanan akhir (mmHg)
+                <input id="deflationEnd" type="number" min="0" max="400" step="any" required>
+              </label>
+              <label>Durasi (detik)
+                <input id="deflationDuration" type="number" min="0.001" step="any" required>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button class="btn" type="submit">Hitung dan Simpan</button>
+            </div>
+          </form>
+          <div id="deflationResult" class="result" hidden></div>
+        </article>
+      </section>
+
+      <!-- RIWAYAT -->
+      <section class="page" id="riwayat">
+        <div class="intro">
+          <h2>Riwayat Pengujian</h2>
+          <p>Data pengujian yang disimpan pada browser ini.</p>
+        </div>
+        <article class="panel">
+          <div class="form-actions" style="margin-top:0;margin-bottom:18px">
+            <button class="btn btn-secondary" id="exportHistory">Ekspor Riwayat CSV</button>
+            <button class="btn btn-danger" id="clearHistory">Hapus Riwayat</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Waktu</th><th>Jenis</th><th>Hasil</th><th>Aksi</th></tr></thead>
+              <tbody id="historyTable">
+                <tr><td colspan="4" class="empty">Belum ada data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <!-- PENGATURAN -->
+      <section class="page" id="pengaturan">
+        <div class="intro">
+          <h2>Pengaturan</h2>
+          <p>Konfigurasi sumber data sensor.</p>
+        </div>
+        <article class="panel">
+          <form id="settingsForm">
+            <div class="form-grid">
+              <label>Alamat WebSocket ESP32
+                <input id="wsUrl" type="text" placeholder="ws://192.168.4.1/ws">
+              </label>
+              <label>Tekanan standar pembanding (mmHg)
+                <input id="referencePressure" type="number" min="0" max="400" step="any" placeholder="Opsional">
+              </label>
+            </div>
+            <div class="form-actions">
+              <button class="btn" type="submit">Simpan Pengaturan</button>
+              <button class="btn btn-secondary" type="button" id="connectDevice">Hubungkan ESP32</button>
+              <button class="btn btn-danger" type="button" id="disconnectDevice">Putuskan</button>
+            </div>
+          </form>
+          <div id="connectionMessage" class="result">
+            Mode simulasi aktif. Sensor belum terhubung.
+          </div>
+        </article>
+      </section>
+
+      <footer>© Copyright by Tedi Haryanto PKJ 2 · SphygmoTest</footer>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const $ = id => document.getElementById(id);
+    const HISTORY_KEY = "sphygmotest_history_v2";
+    const SETTINGS_KEY = "sphygmotest_settings_v2";
+
+    let records = readStorage(HISTORY_KEY, []);
+    let settings = readStorage(SETTINGS_KEY, {
+      wsUrl: "",
+      referencePressure: ""
+    });
+    let socket = null;
+    let latest = { pressure: null, voltage: null };
+    let samples = [];
+
+    function readStorage(key, fallback) {
+      try {
+        return JSON.parse(localStorage.getItem(key)) ?? fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function writeStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch {
+        alert("Data tidak dapat disimpan pada browser.");
+        return false;
+      }
+    }
+
+    function format(value, digits = 2) {
+      return Number(value).toFixed(digits);
+    }
+
+    function csvEscape(value) {
+      return '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    }
+
+    function downloadCSV(filename, rows) {
+      if (!rows.length) {
+        alert("Belum ada data untuk diekspor.");
+        return;
+      }
+
+      const csv = "\uFEFF" + rows.map(row =>
+        row.map(csvEscape).join(";")
+      ).join("\r\n");
+
+      const blob = new Blob([csv], {
+        type: "text/csv;charset=utf-8;"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function saveRecord(type, result, details = {}) {
+      const record = {
+        id: Date.now() + Math.random(),
+        time: new Date().toISOString(),
+        type,
+        result,
+        details
+      };
+
+      records.unshift(record);
+
+      if (writeStorage(HISTORY_KEY, records)) {
+        renderHistory();
+        renderDashboard();
+      }
+    }
+
+    // Navigasi
+    const sidebar = $("sidebar");
+    const overlay = $("overlay");
+    const menuToggle = $("menuToggle");
+
+    function closeMenu() {
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+      menuToggle.setAttribute("aria-expanded", "false");
+    }
+
+    menuToggle.addEventListener("click", () => {
+      const opened = sidebar.classList.toggle("open");
+      overlay.classList.toggle("show", opened);
+      menuToggle.setAttribute("aria-expanded", String(opened));
+    });
+
+    overlay.addEventListener("click", closeMenu);
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeMenu();
+    });
+
+    function navigate(id) {
+      document.querySelectorAll(".page").forEach(page => {
+        page.classList.toggle("active", page.id === id);
+      });
+
+      document.querySelectorAll(".nav-link").forEach(link => {
+        link.classList.toggle("active", link.dataset.page === id);
+      });
+
+      const activeLink = document.querySelector(
+        `.nav-link[data-page="${id}"]`
+      );
+
+      $("pageTitle").textContent = activeLink
+        ? activeLink.textContent.trim()
+        : "Dashboard";
+
+      closeMenu();
+    }
+
+    document.querySelectorAll(".nav-link").forEach(link => {
+      link.addEventListener("click", () => navigate(link.dataset.page));
+    });
+
+    document.querySelectorAll("[data-go]").forEach(button => {
+      button.addEventListener("click", () => navigate(button.dataset.go));
+    });
+
+    // Tekanan, tegangan, dan grafik
+    function updatePressure(pressure, voltage) {
+      if (Number.isFinite(pressure)) {
+        latest.pressure = pressure;
+        $("measuredPressure").textContent = format(pressure, 1);
+        $("dashboardPressure").textContent = format(pressure, 1);
+
+        const boundedPressure = Math.min(400, Math.max(0, pressure));
+        const gaugeLength = 283;
+        const gaugeProgress = (boundedPressure / 400) * gaugeLength;
+        $("gaugeArc").setAttribute("stroke-dasharray", `${gaugeProgress} ${gaugeLength}`);
+        const gaugeAngle = -90 + (boundedPressure / 400) * 180;
+        $("gaugeNeedle").setAttribute("transform", `rotate(${gaugeAngle} 120 120)`);
+
+        samples.push(pressure);
+        if (samples.length > 80) samples.shift();
+        renderChart();
+      }
+
+      if (Number.isFinite(voltage)) {
+        latest.voltage = voltage;
+        $("sensorVoltage").textContent = format(voltage, 3);
+      }
+
+      const reference = Number($("referencePressure").value);
+
+      if ($("referencePressure").value.trim() !== "" &&
+          Number.isFinite(reference) &&
+          latest.pressure !== null) {
+        const error = latest.pressure - reference;
+        $("pressureError").textContent = format(error, 1);
+        $("errorStatus").textContent = "Selisih dari tekanan pembanding";
+      } else {
+        $("pressureError").textContent = "—";
+        $("errorStatus").textContent = "Masukkan tekanan pembanding di Pengaturan";
+      }
+    }
+
+    function renderChart() {
+      const line = $("pressureLine");
+      const empty = $("chartEmpty");
+
+      if (!samples.length) {
+        line.setAttribute("points", "");
+        empty.style.display = "";
+        return;
+      }
+
+      empty.style.display = "none";
+
+      const max = 400;
+      const min = 0;
+      const points = samples.map((value, index) => {
+        const x = 35 + index * (270 / Math.max(samples.length - 1, 1));
+        const bounded = Math.min(max, Math.max(min, value));
+        const y = 145 - (bounded / max) * 130;
+        return `${x},${y}`;
+      }).join(" ");
+
+      line.setAttribute("points", points);
+    }
+
+    $("referencePressure").addEventListener("input", () => {
+      updatePressure(latest.pressure, latest.voltage);
+    });
+
+    $("savePressure").addEventListener("click", () => {
+      if (latest.pressure === null) {
+        alert("Belum ada data tekanan. Hubungkan sensor atau kirim data terlebih dahulu.");
+        return;
+      }
+
+      saveRecord("Pengujian tekanan", format(latest.pressure, 1) + " mmHg", {
+        pressure: latest.pressure,
+        voltage: latest.voltage,
+        reference: $("referencePressure").value || ""
+      });
+
+      $("savePressureMessage").textContent =
+        "Data pengukuran berhasil disimpan ke riwayat browser.";
+    });
+
+    $("exportPressure").addEventListener("click", () => {
+      const rows = [
+        ["Waktu", "Tekanan (mmHg)", "Tegangan (V)", "Pembanding (mmHg)", "Error (mmHg)"]
+      ];
+
+      samples.forEach((pressure, index) => {
+        const referenceText = $("referencePressure").value;
+        const reference = referenceText === "" ? null : Number(referenceText);
+        rows.push([
+          index + 1,
+          pressure,
+          latest.voltage ?? "",
+          reference ?? "",
+          reference === null ? "" : pressure - reference
+        ]);
+      });
+
+      downloadCSV("data-pengukuran-tekanan.csv", rows);
+    });
+
+    // Uji kebocoran: ambil tekanan dari pembacaan sensor terbaru
+    let leakTest = {
+      start: null,
+      end: null,
+      startTime: null,
+      endTime: null,
+      duration: null,
+      drop: null,
+      rate: null
+    };
+
+    function renderLeakResult() {
+      $("leakStartDisplay").textContent =
+        leakTest.start === null ? "—" : format(leakTest.start, 1);
+      $("leakEndDisplay").textContent =
+        leakTest.end === null ? "—" : format(leakTest.end, 1);
+      $("leakDropDisplay").textContent =
+        leakTest.drop === null ? "—" : format(leakTest.drop, 1);
+      $("leakRateDisplay").textContent =
+        leakTest.rate === null ? "—" : format(leakTest.rate, 2);
+      $("leakDurationDisplay").textContent =
+        leakTest.duration === null ? "Durasi: —" :
+        `Durasi: ${format(leakTest.duration, 2)} menit`;
+    }
+
+    $("captureLeakStart").addEventListener("click", () => {
+      if (latest.pressure === null) {
+        alert("Belum ada pembacaan tekanan dari sensor.");
+        return;
+      }
+
+      leakTest.start = latest.pressure;
+      leakTest.startTime = Date.now();
+      leakTest.end = null;
+      leakTest.endTime = null;
+      leakTest.duration = null;
+      leakTest.drop = null;
+      leakTest.rate = null;
+      renderLeakResult();
+      $("saveLeakMessage").textContent = "Tekanan awal berhasil diambil.";
+    });
+
+    $("captureLeakEnd").addEventListener("click", () => {
+      if (latest.pressure === null) {
+        alert("Belum ada pembacaan tekanan dari sensor.");
+        return;
+      }
+      if (leakTest.start === null || leakTest.startTime === null) {
+        alert("Ambil tekanan awal terlebih dahulu.");
+        return;
+      }
+
+      leakTest.end = latest.pressure;
+      leakTest.endTime = Date.now();
+      leakTest.duration = (leakTest.endTime - leakTest.startTime) / 60000;
+      leakTest.drop = leakTest.start - leakTest.end;
+
+      if (leakTest.drop < 0) {
+        alert("Tekanan akhir lebih tinggi dari tekanan awal. Periksa kembali pengujian.");
+        leakTest.rate = null;
+      } else if (leakTest.duration > 0) {
+        leakTest.rate = leakTest.drop / leakTest.duration;
+      } else {
+        leakTest.rate = 0;
+      }
+
+      renderLeakResult();
+      $("saveLeakMessage").textContent = "Tekanan akhir berhasil diambil.";
+    });
+
+    $("saveLeak").addEventListener("click", () => {
+      if (leakTest.start === null || leakTest.end === null ||
+          leakTest.drop === null || leakTest.duration === null) {
+        alert("Ambil tekanan awal dan tekanan akhir sebelum menyimpan.");
+        return;
+      }
+      if (leakTest.drop < 0 || leakTest.duration <= 0) {
+        alert("Hasil uji tidak valid. Ulangi pengujian dan periksa pembacaan tekanan.");
+        return;
+      }
+
+      const result = `Penurunan ${format(leakTest.drop, 1)} mmHg; laju ${format(leakTest.rate, 2)} mmHg/menit`;
+      saveRecord("Uji kebocoran", result, {
+        start: leakTest.start,
+        end: leakTest.end,
+        duration: leakTest.duration,
+        drop: leakTest.drop,
+        rate: leakTest.rate
+      });
+      $("saveLeakMessage").textContent = "Hasil uji kebocoran disimpan ke riwayat.";
+    });
+
+    $("exportLeak").addEventListener("click", () => {
+      const leakRecords = records.filter(record => record.type === "Uji kebocoran");
+      const rows = [
+        ["Waktu", "Tekanan Awal (mmHg)", "Tekanan Akhir (mmHg)",
+         "Durasi (menit)", "Penurunan (mmHg)", "Laju Kebocoran (mmHg/menit)", "Hasil"]
+      ];
+
+      leakRecords.slice().reverse().forEach(record => {
+        const d = record.details || {};
+        rows.push([
+          new Date(record.time).toLocaleString("id-ID"),
+          d.start ?? "",
+          d.end ?? "",
+          d.duration ?? "",
+          d.drop ?? "",
+          d.rate ?? "",
+          record.result ?? ""
+        ]);
+      });
+
+      downloadCSV("data-uji-kebocoran.csv", rows);
+    });
+
+    // Laju buang
+    $("deflationForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      const start = Number($("deflationStart").value);
+      const end = Number($("deflationEnd").value);
+      const seconds = Number($("deflationDuration").value);
+
+      if (start <= end || seconds <= 0) {
+        $("deflationResult").hidden = false;
+        $("deflationResult").textContent =
+          "Tekanan awal harus lebih besar dari tekanan akhir dan durasi harus positif.";
+        return;
+      }
+
+      const rate = (start - end) / (seconds / 60);
+      const result = `Laju buang ${format(rate)} mmHg/menit`;
+
+      $("deflationResult").hidden = false;
+      $("deflationResult").textContent = result;
+
+      saveRecord("Laju buang", result, { start, end, seconds, rate });
+    });
+
+    // Riwayat
+    function renderHistory() {
+      const body = $("historyTable");
+      body.replaceChildren();
+
+      if (!records.length) {
+        body.innerHTML = '<tr><td colspan="4" class="empty">Belum ada data.</td></tr>';
+        return;
+      }
+
+      records.forEach(record => {
+        const tr = document.createElement("tr");
+        const date = new Date(record.time).toLocaleString("id-ID");
+
+        [date, record.type, record.result].forEach(value => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+
+        const action = document.createElement("td");
+        const button = document.createElement("button");
+        button.className = "btn btn-danger";
+        button.textContent = "Hapus";
+        button.addEventListener("click", () => {
+          records = records.filter(item => item.id !== record.id);
+          writeStorage(HISTORY_KEY, records);
+          renderHistory();
+          renderDashboard();
+        });
+
+        action.appendChild(button);
+        tr.appendChild(action);
+        body.appendChild(tr);
+      });
+    }
+
+    $("exportHistory").addEventListener("click", () => {
+      downloadCSV("riwayat-sphygmotest.csv", [
+        ["Waktu", "Jenis", "Hasil"],
+        ...records.map(record => [
+          new Date(record.time).toLocaleString("id-ID"),
+          record.type,
+          record.result
+        ])
+      ]);
+    });
+
+    $("clearHistory").addEventListener("click", () => {
+      if (!confirm("Hapus semua riwayat pengujian?")) return;
+      records = [];
+      writeStorage(HISTORY_KEY, records);
+      renderHistory();
+      renderDashboard();
+    });
+
+    function renderDashboard() {
+      $("totalTests").textContent = records.length;
+
+      const body = $("recentTable");
+      body.replaceChildren();
+
+      if (!records.length) {
+        body.innerHTML = '<tr><td colspan="3" class="empty">Belum ada data.</td></tr>';
+        return;
+      }
+
+      records.slice(0, 5).forEach(record => {
+        const tr = document.createElement("tr");
+
+        [
+          new Date(record.time).toLocaleString("id-ID"),
+          record.type,
+          record.result
+        ].forEach(value => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+
+        body.appendChild(tr);
+      });
+    }
+
+    // Pengaturan dan WebSocket ESP32
+    $("settingsForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      settings = {
+        wsUrl: $("wsUrl").value.trim(),
+        referencePressure: $("referencePressure").value
+      };
+
+      writeStorage(SETTINGS_KEY, settings);
+      $("connectionMessage").textContent = "Pengaturan tersimpan.";
+    });
+
+    $("connectDevice").addEventListener("click", () => {
+      const url = $("wsUrl").value.trim();
+
+      if (!url) {
+        $("connectionMessage").textContent =
+          "Masukkan alamat WebSocket ESP32 terlebih dahulu.";
+        return;
+      }
+
+      try {
+        if (socket) socket.close();
+
+        socket = new WebSocket(url);
+        $("connectionMessage").textContent = "Mencoba menghubungkan ke ESP32...";
+
+        socket.addEventListener("open", () => {
+          $("connectionBadge").textContent = "TERHUBUNG";
+          $("connectionBadge").classList.add("connected");
+          $("deviceStatus").textContent = "Terhubung";
+          $("connectionMessage").textContent = "WebSocket terhubung.";
+        });
+
+        socket.addEventListener("message", event => {
+          try {
+            const data = JSON.parse(event.data);
+            const pressure = Number(data.pressure ?? data.pressure_mmHg);
+            const voltage = Number(data.voltage ?? data.voltage_V);
+
+            updatePressure(
+              Number.isFinite(pressure) ? pressure : NaN,
+              Number.isFinite(voltage) ? voltage : NaN
+            );
+          } catch {
+            $("connectionMessage").textContent =
+              "Data diterima, tetapi format JSON tidak valid.";
+          }
+        });
+
+        socket.addEventListener("error", () => {
+          $("connectionMessage").textContent =
+            "Koneksi gagal. Periksa alamat dan firmware ESP32.";
+        });
+
+        socket.addEventListener("close", () => {
+          $("connectionBadge").textContent = "SIMULASI";
+          $("connectionBadge").classList.remove("connected");
+          $("deviceStatus").textContent = "Simulasi";
+        });
+      } catch {
+        $("connectionMessage").textContent = "Alamat WebSocket tidak valid.";
+      }
+    });
+
+    $("disconnectDevice").addEventListener("click", () => {
+      if (socket) socket.close();
+      socket = null;
+      $("connectionMessage").textContent = "Koneksi diputuskan.";
+      $("connectionBadge").textContent = "SIMULASI";
+      $("connectionBadge").classList.remove("connected");
+      $("deviceStatus").textContent = "Simulasi";
+    });
+
+    // Muat pengaturan tersimpan
+    $("wsUrl").value = settings.wsUrl || "";
+    $("referencePressure").value = settings.referencePressure || "";
+
+    updatePressure(NaN, NaN);
+    renderHistory();
+    renderDashboard();
+  </script>
+</body>
+</html>
